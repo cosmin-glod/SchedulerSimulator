@@ -6,6 +6,9 @@
 #define PROCESS_H
 #define ULL unsigned long long
 #include <vector>
+#include <fstream>
+
+std::ofstream fout("output.txt");
 
 // time is measured in nanoseconds 10^-9
 // te sun pe clion
@@ -42,12 +45,9 @@ public:
 
     // generally time quantum is between 10-100 milliseconds = 10000000 - 100000000 nanoseconds
     static void RoundRobin(std::vector<Process>& processes, ULL time_quantum = default_time_quantum);
+    static void ShortestRemainingTimeFirst(std::vector<Process>& processes);
 
 };
-
-   static void ShortestRemainingTimeFirst(std::vector<Process>& processes);
-
-
 
 
 #endif //PROCESS_H

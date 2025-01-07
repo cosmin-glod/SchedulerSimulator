@@ -10,8 +10,8 @@
 #include <algorithm>
 
 ULL Process::counter = 0;
-ULL Process::default_max_arrival_time = 100;
-ULL Process::default_max_burst_time = 100;
+ULL Process::default_max_arrival_time = 1000;
+ULL Process::default_max_burst_time = 1000;
 
 Process::Process(ULL max_arrival_time, ULL max_burst_time) {
     start_time = completion_time = waiting_time = estimated_burst_time = 0;
@@ -99,7 +99,7 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
     bool busy = false;
     // filling the queue with processes that arrive before the currentTime
     while (!pq.empty()) {
-        std::cout << currentTime << '\n';
+        // std::cout << currentTime << '\n';
         busy = false;
         while (!pq.empty() && pq.top().arriving_time <= currentTime) {
             readyQueue.push(pq.top());
@@ -128,10 +128,10 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
                     currentProcess.turnaround_time += currentProcess.completion_time;
                     currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
                     completedProcesses.push_back(currentProcess);
-                    std::cout << "Procesul: " << currentProcess.pid << " a terminat.\n";
+                    std::cout << currentProcess.pid << ' ' << currentProcess.start_time << ' ' << execution_time << '\n';
                 }
                 else {
-                    currentProcess.arriving_time = currentTime;
+                    std::cout << currentProcess.pid << ' ' << currentProcess.start_time << ' ' << execution_time << '\n';
                     pq.push(currentProcess);
                 }
             }
@@ -140,5 +140,114 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
             currentTime = pq.top().arriving_time;
         }
     }
+    processes = completedProcesses;
+}
+void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
+    // Priority queue sorted by arrival time
+    auto arrivalCompare = [](const Process& a, const Process& b) {
+        return a.arriving_time > b.arriving_time;
+    };
+    std::priority_queue<Process, std::vector<Process>, decltype(arrivalCompare)> arrivalQueue(arrivalCompare);
+
+    for (const auto& process : processes) {
+        arrivalQueue.push(process);
+    }
+
+    // Ready queue sorted by remaining burst time
+    auto burstCompare = [](const Process& a, const Process& b) {
+        return a.remaining_burst_time > b.remaining_burst_time;
+    };
+    std::priority_queue<Process, std::vector<Process>, decltype(burstCompare)> readyQueue(burstCompare);
+
+    ULL currentTime = 0;
+    std::vector<Process> completedProcesses;
+
+    while (!arrivalQueue.empty() || !readyQueue.empty()) {
+        // Add all processes arriving before or at the current time to the ready queue
+        while (!arrivalQueue.empty() && arrivalQueue.top().arriving_time <= currentTime) {
+            readyQueue.push(arrivalQueue.top());
+            // std::cout << "Process " << arrivalQueue.top().pid
+                      // << " added to ready queue at time " << currentTime << '\n';
+            arrivalQueue.pop();
+        }
+
+        if (readyQueue.empty()) {
+            // If no process is ready, advance time to the next arrival
+            currentTime = arrivalQueue.top().arriving_time;
+            continue;
+        }
+
+        // Get the process with the shortest remaining time
+        Process currentProcess = readyQueue.top();
+        readyQueue.pop();
+
+        // Check for potential preemption
+        ULL runtime = currentProcess.remaining_burst_time;
+        Process* preemptingProcess = nullptr;
+
+        // Collect potential preempting processes
+        std::vector<Process> delayedProcesses;
+        while (!arrivalQueue.empty() && arrivalQueue.top().arriving_time < currentTime + runtime) {
+            Process potentialEnemy = arrivalQueue.top();
+            arrivalQueue.pop();
+
+            if (potentialEnemy.arriving_time + potentialEnemy.remaining_burst_time <
+                currentTime + runtime) {
+                // Found a preempting process
+                runtime = potentialEnemy.arriving_time - currentTime;
+                preemptingProcess = &potentialEnemy;
+                break;
+            } else {
+                delayedProcesses.push_back(potentialEnemy);
+            }
+        }
+
+        // Push back delayed processes
+        for (auto& delayedProcess : delayedProcesses) {
+            arrivalQueue.push(delayedProcess);
+        }
+
+        if (preemptingProcess) {
+            // Preemption occurs
+            currentProcess.remaining_burst_time -= runtime;
+            currentTime += runtime;
+            std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+
+
+            if (currentProcess.remaining_burst_time > 0) {
+                readyQueue.push(currentProcess);
+            } else {
+                // Process completes during the runtime
+                currentProcess.completion_time = currentTime;
+                currentProcess.turnaround_time = currentTime - currentProcess.arriving_time;
+                currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
+
+                std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+                completedProcesses.push_back(currentProcess);
+            }
+
+            // Add the preempting process to the ready queue
+            readyQueue.push(*preemptingProcess);
+            // std::cout << "Process " << currentProcess.pid
+                      // << " preempted by process " << preemptingProcess->pid
+                      // << " at time " << currentTime << '\n';
+        } else {
+            // No preemption; process completes execution
+            currentTime += runtime;
+            currentProcess.remaining_burst_time = 0;
+            currentProcess.completion_time = currentTime;
+            currentProcess.turnaround_time = currentTime - currentProcess.arriving_time;
+            currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
+            completedProcesses.push_back(currentProcess);
+
+            std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+
+
+            // std::cout << "Process " << currentProcess.pid
+                      // << " completed at time " << currentTime << '\n';
+        }
+    }
+
+    // Ensure all processes are properly sorted back into the original vector
     processes = completedProcesses;
 }
