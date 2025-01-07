@@ -7,6 +7,12 @@
 #include <iostream>
 #include <ostream>
 
+ULL Process::counter = 0;
+
 Process::Process() {
-    std::cout << "Process created" << std::endl;
+    pid = ++counter;
+    // arriving_time = random ceva
+    // burst_time = ceva random
+    // priority = ceva random;
 }
+
