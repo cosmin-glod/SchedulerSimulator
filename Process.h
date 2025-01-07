@@ -25,7 +25,6 @@ class Process {
     int priority; // the priority :))
     ULL estimated_burst_time;
 
-
 protected:
     void logData() const;
 public:

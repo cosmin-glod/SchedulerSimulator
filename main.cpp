@@ -6,8 +6,9 @@ int main() {
     std::cout << "hai sa facem proiectul la SO!\n";
 
     std::vector<Process> procese = Process::generateProcesses(10);
-    Process::FCFS(procese);
-    //
+    Process::displayAllData(procese);
+
+    Process::RoundRobin(procese, 1000);
     Process::displayAllData(procese);
     return 0;
 }
