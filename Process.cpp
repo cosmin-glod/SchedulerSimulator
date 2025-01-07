@@ -10,8 +10,8 @@
 #include <algorithm>
 
 ULL Process::counter = 0;
-ULL Process::default_max_arrival_time = 10000;
-ULL Process::default_max_burst_time = 10000;
+ULL Process::default_max_arrival_time = 100;
+ULL Process::default_max_burst_time = 100;
 
 Process::Process(ULL max_arrival_time, ULL max_burst_time) {
     start_time = completion_time = waiting_time = estimated_burst_time = 0;
@@ -115,6 +115,12 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
                 ULL execution_time = std::min(time_quantum, currentProcess.remaining_burst_time);
                 currentProcess.remaining_burst_time -= execution_time;
                 currentTime += execution_time;
+
+                // check for newly arrived processes
+                while (!pq.empty() && pq.top().arriving_time <= currentTime) {
+                    readyQueue.push(pq.top());
+                    pq.pop();
+                }
 
                 // the process is done executing
                 if (currentProcess.remaining_burst_time == 0) {

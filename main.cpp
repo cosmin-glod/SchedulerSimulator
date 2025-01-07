@@ -8,7 +8,7 @@ int main() {
     std::vector<Process> procese = Process::generateProcesses(10);
     Process::displayAllData(procese);
 
-    Process::RoundRobin(procese, 1000);
+    Process::RoundRobin(procese, 50);
     Process::displayAllData(procese);
     return 0;
 }
