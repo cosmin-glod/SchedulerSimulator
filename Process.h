@@ -4,16 +4,24 @@
 
 #ifndef PROCESS_H
 #define PROCESS_H
+#define ULL unsigned long long
 
-
+// time is measured in nanoseconds 10^-9 s
 class Process {
     int pid;
-    int ppid;
-    double estimated_burst_time;
-    double burst_time;
+    ULL arriving_time;
+    ULL start_time;
+    ULL completion_time;
+    ULL turnaround_time;
+    ULL burst_time;
+    ULL waiting_time;
+    int priority;
+    ULL estimated_burst_time;
 public:
-    Process();
+    Process(int pid_, ULL arriving_time_) : pid(pid_), arriving_time(arriving_time_) {}
 
+
+    static void FCFS();
 };
 
 
