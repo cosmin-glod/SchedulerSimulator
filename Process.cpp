@@ -10,29 +10,30 @@
 #include <algorithm>
 
 ULL Process::counter = 0;
-ULL Process::default_max_arrival_time = 1000;
+ULL Process::default_max_arrival_time = 100;
 ULL Process::default_max_burst_time = 1000;
+ULL Process::default_time_quantum = 100;
 
 Process::Process(ULL max_arrival_time, ULL max_burst_time) {
-    start_time = completion_time = waiting_time = estimated_burst_time = 0;
+    start_time = completion_time = waiting_time = 0;
     counter += 1;
     pid = counter;
     std::random_device rd;
     std::default_random_engine generator(static_cast<unsigned>(rd()));
     std::uniform_int_distribution<ULL> arrival_dist(0, max_arrival_time);
     std::uniform_int_distribution<ULL> burst_dist(0, max_burst_time);
-    std::uniform_int_distribution<int> priority_dist(0, 2);
 
     arriving_time = arrival_dist(generator);
     burst_time = burst_dist(generator);
-    priority = priority_dist(generator);
     remaining_burst_time = burst_time;
-    turnaround_time = -arriving_time;
+    turnaround_time = 0;
 
-    std::cout << "procesul " << pid << " creat!\n";
+    // std::cout << "Procesul " << pid << " creat!\n";
 }
 
 void Process::FCFS(std::vector<Process>& processes) {
+    ULL avg_waiting_time = 0;
+    ULL avg_turnaround_time = 0;
 
     auto compare = [](const Process& a, const Process& b) {
         return a.arriving_time > b.arriving_time; // Min-heap based on arriving_time
@@ -60,17 +61,26 @@ void Process::FCFS(std::vector<Process>& processes) {
         current.waiting_time = current.start_time - current.arriving_time;
         currentTime += current.burst_time;
 
-        completedProcesses.push_back(current);
-        std::cout << "Procesul " << current.pid << " Start time: " << current.start_time << ",completion  time: " << current.completion_time << ", TAT: " << current.turnaround_time << ", TW: " << current.waiting_time << '\n';
+        avg_waiting_time += current.waiting_time;
+        avg_turnaround_time += current.turnaround_time;
 
+        completedProcesses.push_back(current);
+
+        fout << "Procesul " << current.pid << " Start time: " << current.start_time << ", Completion  time: " << current.completion_time << ", TAT: " << current.turnaround_time << ", TW: " << current.waiting_time << '\n';
     }
 
     processes = completedProcesses;
+
+    avg_waiting_time /= processes.size();
+    avg_turnaround_time /= processes.size();
+
+    std::cout << "Average waiting time: " << avg_waiting_time << '\n';
+    std::cout << "Average turnaround time: " << avg_turnaround_time << '\n';
 }
 
 void Process::logData() const {
     std::cout << "Process ID: " << pid << ", Arriving Time: " << arriving_time << ", Burst Time: " << burst_time << '\n';
-    std::cout << '\t' << "Start time: " << start_time << ", Completion Time: " << completion_time << ", Waiting Time:" << waiting_time << '\n';
+    std::cout << '\t' << "Start time: " << start_time << ", Completion Time: " << completion_time << ", Waiting Time: " << waiting_time << '\n';
     std::cout << '\n';
 }
 
@@ -78,10 +88,12 @@ void Process::displayAllData(std::vector<Process>& Processes) {
     for (const auto& process : Processes) {
         process.logData();
     }
-
 }
 
 void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
+    ULL avg_waiting_time = 0;
+    ULL avg_turnaround_time = 0;
+
     std::queue<Process> readyQueue;
     std::vector<Process> completedProcesses;
 
@@ -125,15 +137,17 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
                 // the process is done executing
                 if (currentProcess.remaining_burst_time == 0) {
                     currentProcess.completion_time = currentTime;
-                    currentProcess.turnaround_time += currentProcess.completion_time;
+                    currentProcess.turnaround_time = currentProcess.completion_time - currentProcess.arriving_time;
                     currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
                     completedProcesses.push_back(currentProcess);
-                    std::cout << currentProcess.pid << ' ' << currentProcess.start_time << ' ' << execution_time << '\n';
+                    avg_waiting_time += currentProcess.waiting_time;
+                    avg_turnaround_time += currentProcess.turnaround_time;
                 }
                 else {
-                    std::cout << currentProcess.pid << ' ' << currentProcess.start_time << ' ' << execution_time << '\n';
                     pq.push(currentProcess);
                 }
+                fout << currentProcess.pid << ' ' << currentProcess.start_time << ' ' << execution_time << '\n';
+
             }
         }
         else if (!pq.empty()) {
@@ -141,8 +155,17 @@ void Process::RoundRobin(std::vector<Process> &processes, ULL time_quantum) {
         }
     }
     processes = completedProcesses;
+
+    avg_waiting_time /= processes.size();
+    avg_turnaround_time /= processes.size();
+
+    std::cout << "Average waiting time: " << avg_waiting_time << '\n';
+    std::cout << "Average turnaround time: " << avg_turnaround_time << '\n';
 }
 void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
+    ULL avg_waiting_time = 0;
+    ULL avg_turnaround_time = 0;
+
     // Priority queue sorted by arrival time
     auto arrivalCompare = [](const Process& a, const Process& b) {
         return a.arriving_time > b.arriving_time;
@@ -211,7 +234,7 @@ void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
             // Preemption occurs
             currentProcess.remaining_burst_time -= runtime;
             currentTime += runtime;
-            std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+            fout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
 
 
             if (currentProcess.remaining_burst_time > 0) {
@@ -221,8 +244,10 @@ void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
                 currentProcess.completion_time = currentTime;
                 currentProcess.turnaround_time = currentTime - currentProcess.arriving_time;
                 currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
+                avg_turnaround_time += currentProcess.turnaround_time;
+                avg_waiting_time += currentProcess.waiting_time;
 
-                std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+                fout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
                 completedProcesses.push_back(currentProcess);
             }
 
@@ -239,8 +264,10 @@ void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
             currentProcess.turnaround_time = currentTime - currentProcess.arriving_time;
             currentProcess.waiting_time = currentProcess.turnaround_time - currentProcess.burst_time;
             completedProcesses.push_back(currentProcess);
+            avg_waiting_time += currentProcess.waiting_time;
+            avg_turnaround_time += currentProcess.turnaround_time;
 
-            std::cout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
+            fout << currentProcess.pid << ' ' << currentTime - runtime <<  " " << runtime << '\n';
 
 
             // std::cout << "Process " << currentProcess.pid
@@ -250,4 +277,10 @@ void Process::ShortestRemainingTimeFirst(std::vector<Process>& processes) {
 
     // Ensure all processes are properly sorted back into the original vector
     processes = completedProcesses;
+
+    avg_waiting_time /= processes.size();
+    avg_turnaround_time /= processes.size();
+
+    std::cout << "Average waiting time: " << avg_waiting_time << '\n';
+    std::cout << "Average turnaround time: " << avg_turnaround_time << '\n';
 }

@@ -8,7 +8,7 @@
 #include <vector>
 #include <fstream>
 
-std::ofstream fout("output.txt");
+inline std::ofstream fout("output.txt");
 
 // time is measured in nanoseconds 10^-9
 // te sun pe clion
@@ -25,14 +25,12 @@ class Process {
     ULL burst_time; // time on the CPU
     ULL waiting_time; // time waiting in queue
     ULL remaining_burst_time; // the remaining time the process has to complete the task
-    int priority; // the priority :))
-    ULL estimated_burst_time;
 
 protected:
     void logData() const;
 public:
     Process(ULL max_arrival_time = default_max_arrival_time, ULL max_burst_time = default_max_burst_time);
-    static void FCFS(std::vector<Process>& processes);
+
     static void displayAllData(std::vector<Process>& processes);
 
     static std::vector<Process> generateProcesses(int num_processes, ULL max_arrival_time = default_max_arrival_time, ULL max_burst_time = default_max_burst_time) {
@@ -43,10 +41,12 @@ public:
         return processes;
     }
 
+    static void FCFS(std::vector<Process>& processes);
+
     // generally time quantum is between 10-100 milliseconds = 10000000 - 100000000 nanoseconds
     static void RoundRobin(std::vector<Process>& processes, ULL time_quantum = default_time_quantum);
-    static void ShortestRemainingTimeFirst(std::vector<Process>& processes);
 
+    static void ShortestRemainingTimeFirst(std::vector<Process>& processes);
 };
 
 
